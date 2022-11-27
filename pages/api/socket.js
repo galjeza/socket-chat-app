@@ -13,51 +13,52 @@ export default function SocketHandler(req, res) {
     if (res.socket.server.io) {
         res.end();
         return;
-    }else{
+    } else {
         const io = new Server(res.socket.server);
         res.socket.server.io = io;
 
         io.on("connection", (socket) => {
             socket.on("createdMessage", (data) => {
-                try{
+                try {
                     const decryptedData = decrypt(data, "secret");
                     const parsedData = JSON.parse(decryptedData);
-                    console.log("Uporabnik "+ parsedData.author + " je poslal sporočilo: " + parsedData.message);
+                    console.log("Uporabnik " + parsedData.author + " je poslal sporočilo: " + parsedData.message);
                     socket.broadcast.emit("newIncomingMessage", data);
-                }catch (e){
+                } catch (e) {
                     sendError(socket, e);
                 }
 
             })
 
             socket.on("join", (username) => {
-                try{
+                try {
+                    const decryptedUsername = decrypt(username, "secret");
                     const stringifiedData = JSON.stringify({
                         author: "Server",
-                        message: `${username} se je pridružil klepetu `,
+                        message: `${decryptedUsername} se je pridružil klepetu `,
 
                     });
                     const encryptedData = encrypt(stringifiedData, "secret");
-                    console.log("Uporabnik "+ username + " se je pridružil klepetu");
-                    socket.broadcast.emit("newIncomingMessage",encryptedData);
-                }catch (e){
+                    console.log("Uporabnik " + username + " se je pridružil klepetu");
+                    socket.broadcast.emit("newIncomingMessage", encryptedData);
+                } catch (e) {
                     sendError(socket, e);
                 }
 
             });
 
             socket.on("leaveChat", (data) => {
-                try{
+                try {
                     const decryptedData = decrypt(data, "secret");
                     const stringifiedData = JSON.stringify({
                         author: "Server",
                         message: `${decryptedData} je spustil klepet`,
                     });
 
-                    console.log("Uporabnik "+ decryptedData + " je zapustil klepet");
+                    console.log("Uporabnik " + decryptedData + " je zapustil klepet");
                     const encryptedData = encrypt(stringifiedData, "secret");
-                    socket.broadcast.emit("newIncomingMessage",encryptedData);
-                }catch (e){
+                    socket.broadcast.emit("newIncomingMessage", encryptedData);
+                } catch (e) {
                     sendError(socket, e);
                 }
 

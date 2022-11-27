@@ -1,70 +1,69 @@
 import {useEffect, useState} from "react";
 import io from "socket.io-client";
 import Router from 'next/router'
-import {decrypt,encrypt} from "./utils/encryption";
+import {decrypt, encrypt} from "./utils/encryption";
 
 
 let socket;
 
-export default function Chat({ username }) {
+export default function Chat({username}) {
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
-    useEffect( () => {
+    useEffect(() => {
         initiateChat();
     }, []);
 
 
-
-
-    const initiateChat =async () => {
+    const initiateChat = async () => {
         await fetch("/api/socket")
 
         socket = io();
-        socket.emit("join", username);
+        socket.emit("join", encrypt(username, "secret"));
         socket.on("newIncomingMessage", (data) => {
-            try{
-                const decryptedData = decrypt(data, "secret");
-                const parsedData = JSON.parse(decryptedData);
-                setMessages((messages) => [...messages, parsedData]);
-            }catch (e){
-                console.log(e);
-            }
+                try {
+                    const decryptedData = decrypt(data, "secret");
+                    const parsedData = JSON.parse(decryptedData);
+                    setMessages((messages) => [...messages, parsedData]);
+                } catch (e) {
+                    console.log(e);
+                }
 
-        }
+            }
         );
 
     }
 
 
     const sendMessage = async () => {
-        try{
+        try {
             const data = {
                 author: username,
                 message: message,
             }
             const stringifiedData = JSON.stringify(data);
-            socket.emit("createdMessage",encrypt(stringifiedData, "secret"));
+            socket.emit("createdMessage", encrypt(stringifiedData, "secret"));
             setMessages((prevState) => [...prevState, {
                 author: username,
                 message: message,
             }]);
             setMessage("");
-        }catch(e){
+        } catch (e) {
             console.log(e);
         }
 
     };
 
     const leaveChat = () => {
-        socket.emit("leaveChat",encrypt( username, "secret"));
-        setTimeout(() => {
+        try {
+            socket.emit("leaveChat", encrypt(username, "secret"));
+
             socket.disconnect();
             Router.reload(
                 window.location.pathname
             );
-        }, 1000);
-
-
+        } catch (e) {
+            console.log(e);
+        }
 
 
     }
@@ -105,7 +104,8 @@ export default function Chat({ username }) {
                             onChange={(e) => setMessage(e.target.value)}
                             onKeyUp={handleKeypress}
                         />
-                        <div className="border-l border-gray-300 flex justify-center items-center  rounded-br-md group hover:bg-purple-500 transition-all">
+                        <div
+                            className="border-l border-gray-300 flex justify-center items-center  rounded-br-md group hover:bg-purple-500 transition-all">
                             <button
                                 className="group-hover:text-white px-3 h-full"
                                 onClick={() => {
